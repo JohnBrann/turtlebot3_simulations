@@ -1,77 +1,83 @@
-#!/usr/bin/env python3
-#
-# Copyright 2019 ROBOTIS CO., LTD.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# Authors: Joep Tool
-
 import os
-
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
-
 def generate_launch_description():
-    launch_file_dir = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
+    pkg_robot_common_sim = get_package_share_directory('robot-common-sim')
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
+    pkg_turtlebot3_gazebo = get_package_share_directory('turtlebot3_gazebo')
 
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    x_pose = LaunchConfiguration('x_pose', default='-2.0')
-    y_pose = LaunchConfiguration('y_pose', default='-0.5')
-
-    world = os.path.join(
-        get_package_share_directory('turtlebot3_gazebo'),
-        'worlds',
-        'turtlebot3_world.world'
+    # Declare the launch argument for the world name
+    world_arg = DeclareLaunchArgument(
+        'world', default_value='4x4m_empty.world',
+        description='Name of the Gazebo world to load'
     )
 
+    # Path to the worlds directory
+    world_dir = os.path.join(pkg_robot_common_sim, 'worlds')
+
+    # Declare launch argument for simulation time
+    sim_time = DeclareLaunchArgument(
+       'use_sim_time', default_value='true',
+       description='Use simulation time'
+    )
+
+    # Declare launch arguments for spawn position
+    x_position = DeclareLaunchArgument(
+        'x_pose', default_value='-1.8',
+        description='X position of the robot'
+    )
+    y_position = DeclareLaunchArgument(
+        'y_pose', default_value='-1.8',
+        description='Y position of the robot'
+    )
+
+    # Include Gazebo server launch with world substitution
     gzserver_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_gazebo_ros, 'launch', 'gzserver.launch.py')
         ),
-        launch_arguments={'world': world}.items()
+        launch_arguments={'world': [world_dir + '/', LaunchConfiguration('world')]}.items()
     )
 
+    # Include Gazebo client launch
     gzclient_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(pkg_gazebo_ros, 'launch', 'gzclient.launch.py')
-        )
+        ),
+        launch_arguments={'world': [world_dir + '/', LaunchConfiguration('world')]}.items()
     )
 
+    # Include the robot state publisher
     robot_state_publisher_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(launch_file_dir, 'robot_state_publisher.launch.py')
+            os.path.join(pkg_turtlebot3_gazebo, 'launch', 'robot_state_publisher.launch.py')
         ),
-        launch_arguments={'use_sim_time': use_sim_time}.items()
+        launch_arguments={'use_sim_time': LaunchConfiguration('use_sim_time')}.items()
     )
 
+    # Spawn TurtleBot3 with x and y positions
     spawn_turtlebot_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(launch_file_dir, 'spawn_turtlebot3.launch.py')
+            os.path.join(pkg_turtlebot3_gazebo, 'launch', 'spawn_turtlebot3.launch.py')
         ),
         launch_arguments={
-            'x_pose': x_pose,
-            'y_pose': y_pose
+            'x_pose': LaunchConfiguration('x_pose'),
+            'y_pose': LaunchConfiguration('y_pose')
         }.items()
     )
 
+    # Define the launch description
     ld = LaunchDescription()
 
-    # Add the commands to the launch description
+    # Add arguments and actions to the launch description
+    ld.add_action(world_arg)
+    ld.add_action(sim_time)
+    ld.add_action(x_position)
+    ld.add_action(y_position)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(robot_state_publisher_cmd)
