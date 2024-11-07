@@ -1,68 +1,55 @@
-# Copyright 2019 Open Source Robotics Foundation, Inc.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 import os
-
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression, PathJoinSubstitution
 from launch_ros.actions import Node
-
+from launch_ros.substitutions import FindPackageShare
 
 def generate_launch_description():
-    # Get the urdf file
-    TURTLEBOT3_MODEL = os.environ['TURTLEBOT3_MODEL']
-    model_folder = 'turtlebot3_' + TURTLEBOT3_MODEL
-    urdf_path = os.path.join(
-        get_package_share_directory('turtlebot3_gazebo'),
+    # Declare the launch argument for the model
+    turtlebot3_model = DeclareLaunchArgument(
+        'model', 
+        default_value='burger',
+        description='Turtlebot3 Robot Model: burger, waffle, waffle_pi'
+    )
+
+    # Declare the launch arguments for x and y positions
+    x_pose = DeclareLaunchArgument('x_pose', default_value='0.0')
+    y_pose = DeclareLaunchArgument('y_pose', default_value='0.0')
+
+    # Concatenate "turtlebot3_" with the model name using PythonExpression
+    model_folder = PythonExpression(["'turtlebot3_' + '", LaunchConfiguration('model'), "'"])
+
+    # Construct the path dynamically with PathJoinSubstitution
+    urdf_path = PathJoinSubstitution([
+        FindPackageShare('turtlebot3_gazebo'),
         'models',
         model_folder,
         'model.sdf'
-    )
+    ])
 
-    # Launch configuration variables specific to simulation
-    x_pose = LaunchConfiguration('x_pose', default='0.0')
-    y_pose = LaunchConfiguration('y_pose', default='0.0')
-
-    # Declare the launch arguments
-    declare_x_position_cmd = DeclareLaunchArgument(
-        'x_pose', default_value='0.0',
-        description='Specify namespace of the robot')
-
-    declare_y_position_cmd = DeclareLaunchArgument(
-        'y_pose', default_value='0.0',
-        description='Specify namespace of the robot')
-
+    # Use LaunchConfiguration to reference the 'model', 'x_pose', and 'y_pose' arguments
     start_gazebo_ros_spawner_cmd = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
         arguments=[
-            '-entity', TURTLEBOT3_MODEL,
+            '-entity', LaunchConfiguration('model'),  # Reference the model value
             '-file', urdf_path,
-            '-x', x_pose,
-            '-y', y_pose,
+            '-x', LaunchConfiguration('x_pose'),
+            '-y', LaunchConfiguration('y_pose'),
             '-z', '0.01'
         ],
         output='screen',
     )
 
+    # Create the LaunchDescription and add all actions
     ld = LaunchDescription()
 
     # Declare the launch options
-    ld.add_action(declare_x_position_cmd)
-    ld.add_action(declare_y_position_cmd)
+    ld.add_action(turtlebot3_model)
+    ld.add_action(x_pose)
+    ld.add_action(y_pose)
 
     # Add any conditioned actions
     ld.add_action(start_gazebo_ros_spawner_cmd)
