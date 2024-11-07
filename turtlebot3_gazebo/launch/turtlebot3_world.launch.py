@@ -35,6 +35,21 @@ def generate_launch_description():
         description='Y position of the robot'
     )
 
+    robot_model = DeclareLaunchArgument(
+        'model', default_value='burger',
+        description='Robot Model'
+    )
+
+    robot_model_folder = DeclareLaunchArgument(
+        'model_path', default_value='turtlebot3_burger',
+        description='Robot Model'
+    )
+
+    robot_state_publisher_model = DeclareLaunchArgument(
+        'robot_state_publisher_model', default_value='turtlebot3_burger.urdf',
+        description='robot model name in robot_state_publisher'
+    )
+
     # Include Gazebo server launch with world substitution
     gzserver_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -56,7 +71,11 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(pkg_turtlebot3_gazebo, 'launch', 'robot_state_publisher.launch.py')
         ),
-        launch_arguments={'use_sim_time': LaunchConfiguration('use_sim_time')}.items()
+        launch_arguments={
+            'use_sim_time': LaunchConfiguration('use_sim_time'),
+            'model': LaunchConfiguration('model'),
+            'robot_state_publisher_model': LaunchConfiguration('robot_state_publisher_model'),
+        }.items()
     )
 
     # Spawn TurtleBot3 with x and y positions
@@ -66,7 +85,9 @@ def generate_launch_description():
         ),
         launch_arguments={
             'x_pose': LaunchConfiguration('x_pose'),
-            'y_pose': LaunchConfiguration('y_pose')
+            'y_pose': LaunchConfiguration('y_pose'),
+            'model': LaunchConfiguration('model'),
+            'model_path': LaunchConfiguration('model_path'),
         }.items()
     )
 
@@ -78,6 +99,10 @@ def generate_launch_description():
     ld.add_action(sim_time)
     ld.add_action(x_position)
     ld.add_action(y_position)
+    ld.add_action(robot_model)
+    ld.add_action(robot_model_folder)
+    ld.add_action(robot_state_publisher_model)
+    
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(robot_state_publisher_cmd)
