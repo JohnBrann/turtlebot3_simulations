@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Arguments -->
+    <arg name="use_sim_time" default="true"/>
+    <arg name="x_pose" default="-1.8"/>
+    <arg name="y_pose" default="-0.5"/>
+    <arg name="model" default="waffle" description="TurtleBot3 Model"/>
+    <arg name="world" default="4x4m_empty.world"/>
+
+    <!-- Environment Variables -->
+    <let name="world_path" value="$(find-pkg-share robot-common-sim)/worlds/$(var world)"/>
+    <let name="launch_file_dir" value="$(find-pkg-share turtlebot3_gazebo)/launch"/>
+
+    <!-- Launch Gazebo Server -->
+    <include file="$(find-pkg-share gazebo_ros)/launch/gzserver.launch.py">
+        <arg name="world" value="$(var world_path)"/>
+    </include>
+
+    <!-- Launch Gazebo Client -->
+    <include file="$(find-pkg-share gazebo_ros)/launch/gzclient.launch.py">
+        <arg name="world" value="$(var world_path)"/>
+    </include>
+
+    <!-- Launch Robot State Publisher -->
+    <include file="$(var launch_file_dir)/robot_state_publisher.launch">
+        <arg name="use_sim_time" value="$(var use_sim_time)"/>
+        <arg name="model" value="$(var model)"/>
+    </include>
+
+    <!-- Spawn TurtleBot3 -->
+    <include file="$(var launch_file_dir)/spawn_turtlebot3.launch">
+        <arg name="x_pose" value="$(var x_pose)"/>
+        <arg name="y_pose" value="$(var y_pose)"/>
+        <arg name="model" value="$(var model)"/>
+    </include>
+
+</launch>
